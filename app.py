@@ -392,15 +392,47 @@ def view_resume(resume_id):
         except Exception:
             return default
 
+    # Normalize complex fields for templates (ensure lists of dicts)
+    raw_skills = _safe_json_list(resume[5])
+    raw_experience = _safe_json_list(resume[6])
+    raw_education = _safe_json_list(resume[7])
+
+    def _norm_exp(item):
+        # Accept dict or string; coerce to dict with expected keys
+        if isinstance(item, dict):
+            return {
+                'title': item.get('title') or item.get('position') or item.get('role') or 'Position',
+                'company': item.get('company', ''),
+                'duration': item.get('duration', ''),
+                'description': item.get('description', '')
+            }
+        # Fallback if it was a plain string
+        s = str(item)
+        return {'title': s, 'company': '', 'duration': '', 'description': ''}
+
+    def _norm_edu(item):
+        if isinstance(item, dict):
+            return {
+                'degree': item.get('degree') or item.get('qualification') or 'Degree',
+                'institution': item.get('institution', ''),
+                'year': item.get('year', ''),
+                'details': item.get('details', '')
+            }
+        s = str(item)
+        return {'degree': s, 'institution': '', 'year': '', 'details': ''}
+
+    norm_experience = [_norm_exp(it) for it in raw_experience]
+    norm_education = [_norm_edu(it) for it in raw_education]
+
     resume_data = {
         'id': resume[0],
         'filename': resume[1],
         'original_filename': resume[2],
         'upload_date': resume[3],
         'extracted_text': resume[4],
-        'skills': _safe_json_list(resume[5]),
-        'experience': _safe_json_list(resume[6]),
-        'education': _safe_json_list(resume[7]),
+        'skills': raw_skills,
+        'experience': norm_experience,
+        'education': norm_education,
         'contact_info': _safe_json_obj(resume[8]),
         'overall_score': _safe_float(resume[9], 0.0)
     }
