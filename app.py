@@ -384,6 +384,14 @@ def view_resume(resume_id):
         except Exception:
             return {}
 
+    def _safe_float(val, default=0.0):
+        try:
+            if val is None:
+                return default
+            return float(val)
+        except Exception:
+            return default
+
     resume_data = {
         'id': resume[0],
         'filename': resume[1],
@@ -394,7 +402,7 @@ def view_resume(resume_id):
         'experience': _safe_json_list(resume[6]),
         'education': _safe_json_list(resume[7]),
         'contact_info': _safe_json_obj(resume[8]),
-        'overall_score': resume[9]
+        'overall_score': _safe_float(resume[9], 0.0)
     }
     
     return render_template('resume_detail.html', resume=resume_data)
