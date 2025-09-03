@@ -365,17 +365,35 @@ def view_resume(resume_id):
         flash('Resume not found')
         return redirect(url_for('list_resumes'))
     
-    # Parse JSON fields
+    # Parse JSON fields safely
+    def _safe_json_list(val):
+        if not val:
+            return []
+        try:
+            parsed = json.loads(val)
+            return parsed if isinstance(parsed, list) else []
+        except Exception:
+            return []
+
+    def _safe_json_obj(val):
+        if not val:
+            return {}
+        try:
+            parsed = json.loads(val)
+            return parsed if isinstance(parsed, dict) else {}
+        except Exception:
+            return {}
+
     resume_data = {
         'id': resume[0],
         'filename': resume[1],
         'original_filename': resume[2],
         'upload_date': resume[3],
         'extracted_text': resume[4],
-        'skills': json.loads(resume[5]) if resume[5] else [],
-        'experience': json.loads(resume[6]) if resume[6] else [],
-        'education': json.loads(resume[7]) if resume[7] else [],
-        'contact_info': json.loads(resume[8]) if resume[8] else {},
+        'skills': _safe_json_list(resume[5]),
+        'experience': _safe_json_list(resume[6]),
+        'education': _safe_json_list(resume[7]),
+        'contact_info': _safe_json_obj(resume[8]),
         'overall_score': resume[9]
     }
     
