@@ -424,17 +424,62 @@ def view_resume(resume_id):
     norm_experience = [_norm_exp(it) for it in raw_experience]
     norm_education = [_norm_edu(it) for it in raw_education]
 
+    # Map DB columns correctly (see init_db table schema)
+    # resumes: (0:id,1:user_id,2:filename,3:original_filename,4:upload_date,5:extracted_text,6:skills,7:experience,8:education,9:contact_info,10:overall_score)
+
+    # Rebuild normalized fields using correct indexes
+    raw_skills = _safe_json_list(resume[6])
+    raw_experience = _safe_json_list(resume[7])
+    raw_education = _safe_json_list(resume[8])
+
+    def _norm_exp(item):
+        # If extractor format with start_date/end_date/description
+        if isinstance(item, dict) and ('start_date' in item or 'end_date' in item):
+            start = item.get('start_date', '')
+            end = item.get('end_date', '')
+            desc = item.get('description', '').strip() or 'Experience'
+            duration = f"{start} - {end}".strip(' -')
+            return {'title': desc, 'company': item.get('company', ''), 'duration': duration, 'description': ''}
+        # Generic dict mapping
+        if isinstance(item, dict):
+            return {
+                'title': item.get('title') or item.get('position') or item.get('role') or item.get('description') or 'Position',
+                'company': item.get('company', ''),
+                'duration': item.get('duration', ''),
+                'description': item.get('details', '') or item.get('description', '')
+            }
+        # Plain string fallback
+        s = str(item)
+        return {'title': s, 'company': '', 'duration': '', 'description': ''}
+
+    def _norm_edu(item):
+        if isinstance(item, dict):
+            # Map our extractor fields (degree + field)
+            degree = item.get('degree') or item.get('qualification') or 'Degree'
+            details = item.get('details') or item.get('field') or ''
+            return {
+                'degree': degree,
+                'institution': item.get('institution', ''),
+                'year': item.get('year', ''),
+                'details': details
+            }
+        s = str(item)
+        return {'degree': s, 'institution': '', 'year': '', 'details': ''}
+
+    norm_experience = [_norm_exp(it) for it in raw_experience]
+    norm_education = [_norm_edu(it) for it in raw_education]
+
     resume_data = {
         'id': resume[0],
-        'filename': resume[1],
-        'original_filename': resume[2],
-        'upload_date': resume[3],
-        'extracted_text': resume[4],
+        'filename': resume[2],
+        'original_filename': resume[3],
+        'upload_date': resume[4],
+        'extracted_text': resume[5],
         'skills': raw_skills,
         'experience': norm_experience,
         'education': norm_education,
-        'contact_info': _safe_json_obj(resume[8]),
-        'overall_score': _safe_float(resume[9], 0.0)
+        'contact_info': _safe_json_obj(resume[9]),
+        'overall_score': _safe_float(resume[10], 0.0)
     }
     
     return render_template('resume_detail.html', resume=resume_data)
@@ -544,24 +589,38 @@ def analytics():
     skill_counts = Counter(all_skills)
     top_skills = skill_counts.most_common(10)
     
-    # Get timeline data for the last 30 days
+    # Get timeline data for the last 30 days (use localtime)
     cursor.execute('''
-        SELECT DATE(upload_date) as date, COUNT(*) as count
+        SELECT DATE(upload_date, 'localtime') as date, COUNT(*) as count
         FROM resumes 
-        WHERE upload_date >= date('now', '-30 days')
-        GROUP BY DATE(upload_date)
+        WHERE upload_date >= datetime('now', '-30 days', 'localtime')
+        GROUP BY DATE(upload_date, 'localtime')
         ORDER BY date
     ''')
     resume_timeline = cursor.fetchall()
     
     cursor.execute('''
-        SELECT DATE(created_date) as date, COUNT(*) as count
+        SELECT DATE(created_date, 'localtime') as date, COUNT(*) as count
         FROM job_descriptions 
-        WHERE created_date >= date('now', '-30 days')
-        GROUP BY DATE(created_date)
+        WHERE created_date >= datetime('now', '-30 days', 'localtime')
+        GROUP BY DATE(created_date, 'localtime')
         ORDER BY date
     ''')
     job_timeline = cursor.fetchall()
+    
+    # Score distribution buckets for chart
+    cursor.execute('SELECT overall_score FROM resumes')
+    scores = [row[0] or 0 for row in cursor.fetchall()]
+    bins = [0, 0, 0, 0]  # poor, average, good, excellent
+    for s in scores:
+        if s >= 80:
+            bins[3] += 1
+        elif s >= 60:
+            bins[2] += 1
+        elif s >= 40:
+            bins[1] += 1
+        else:
+            bins[0] += 1
     
     # Get recent activity (last 20 activities)
     recent_activities = []
@@ -616,7 +675,8 @@ def analytics():
         'avg_score': round(avg_score, 2),
         'top_skills': top_skills,
         'timeline_data': timeline_data,
-        'recent_activities': recent_activities
+        'recent_activities': recent_activities,
+        'score_bins': bins
     }
     
     return render_template('analytics.html', stats=stats)
@@ -637,21 +697,21 @@ def get_timeline_api(period):
     else:
         days = 30
     
-    # Get timeline data
+    # Get timeline data (localtime-aware)
     cursor.execute(f'''
-        SELECT DATE(upload_date) as date, COUNT(*) as count
+        SELECT DATE(upload_date, 'localtime') as date, COUNT(*) as count
         FROM resumes 
-        WHERE upload_date >= date('now', '-{days} days')
-        GROUP BY DATE(upload_date)
+        WHERE upload_date >= datetime('now', '-{days} days', 'localtime')
+        GROUP BY DATE(upload_date, 'localtime')
         ORDER BY date
     ''')
     resume_timeline = cursor.fetchall()
     
     cursor.execute(f'''
-        SELECT DATE(created_date) as date, COUNT(*) as count
+        SELECT DATE(created_date, 'localtime') as date, COUNT(*) as count
         FROM job_descriptions 
-        WHERE created_date >= date('now', '-{days} days')
-        GROUP BY DATE(created_date)
+        WHERE created_date >= datetime('now', '-{days} days', 'localtime')
+        GROUP BY DATE(created_date, 'localtime')
         ORDER BY date
     ''')
     job_timeline = cursor.fetchall()

@@ -6,10 +6,10 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
     <div class="btn-group" role="group">
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+        <button id="refreshBtn" type="button" class="btn btn-outline-primary btn-sm" onclick="refreshData(event)">
             <i class="fas fa-sync-alt"></i> Refresh
         </button>
-        <button type="button" class="btn btn-outline-success btn-sm" onclick="exportData()">
+        <button id="exportBtn" type="button" class="btn btn-outline-success btn-sm" onclick="exportData()">
             <i class="fas fa-download"></i> Export
         </button>
     </div>
@@ -278,10 +278,10 @@ function initializeCharts() {
     new Chart(scoreCtx, {
         type: 'pie',
         data: {
-            labels: ['Excellent (80-100%)', 'Good (60-79%)', 'Average (40-59%)', 'Poor (0-39%)'],
+            labels: ['Poor (0-39%)', 'Average (40-59%)', 'Good (60-79%)', 'Excellent (80-100%)'],
             datasets: [{
-                data: [25, 35, 30, 10], // Sample data - would be calculated from actual scores
-                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#dc3545']
+                data: {{ stats.score_bins | tojson }},
+                backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745']
             }]
         },
         options: {
@@ -352,33 +352,59 @@ function initializeCharts() {
     });
 }
 
-function refreshData() {
+function refreshData(e) {
     // Refresh recent activity
     refreshRecentActivity();
     
     // Refresh timeline with current period
-    const activeButton = document.querySelector('.btn-group .btn.active');
-    if (activeButton) {
-        const period = activeButton.textContent.includes('7') ? '7d' : 
-                      activeButton.textContent.includes('30') ? '30d' : '90d';
-        updateTimeline(period);
-    }
+    const container = document.querySelector('.card-header .btn-group.btn-group-sm') || document.querySelector('.btn-group');
+    const activeButton = container ? container.querySelector('.btn.active') : null;
+    const period = activeButton && activeButton.textContent.includes('7') ? '7d' : 
+                   activeButton && activeButton.textContent.includes('90') ? '90d' : '30d';
+    updateTimeline(period);
     
     // Show refresh indicator
-    const refreshBtn = event.target;
-    const originalIcon = refreshBtn.innerHTML;
+    const refreshBtn = e ? e.currentTarget : document.getElementById('refreshBtn');
+    const originalHtml = refreshBtn.innerHTML;
     refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
     refreshBtn.disabled = true;
     
     setTimeout(() => {
-        refreshBtn.innerHTML = originalIcon;
+        refreshBtn.innerHTML = originalHtml;
         refreshBtn.disabled = false;
-    }, 1000);
+    }, 800);
 }
 
 function exportData() {
-    // This would generate and download a report
-    alert('Export functionality would be implemented here');
+    // Build a lightweight export (CSV) from current stats and timeline data
+    const timeline = timelineChart ? {
+        labels: timelineChart.data.labels,
+        resume: timelineChart.data.datasets[0].data,
+        jobs: timelineChart.data.datasets[1].data,
+    } : {labels: [], resume: [], jobs: []};
+
+    const rows = [];
+    rows.push(['Metric','Value']);
+    rows.push(['Total Resumes','{{ stats.total_resumes }}']);
+    rows.push(['Job Descriptions','{{ stats.total_jobs }}']);
+    rows.push(['Total Matches','{{ stats.total_matches }}']);
+    rows.push(['Average Score','{{ stats.avg_score }}%']);
+    rows.push([]);
+    rows.push(['Date','Resumes Uploaded','Jobs Posted']);
+    for (let i = 0; i < timeline.labels.length; i++) {
+        rows.push([timeline.labels[i], timeline.resume[i] || 0, timeline.jobs[i] || 0]);
+    }
+
+    const csv = rows.map(r => r.map(v => '"' + String(v).replaceAll('"','""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'analytics_export.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 function updateSkillsChart(range) {
