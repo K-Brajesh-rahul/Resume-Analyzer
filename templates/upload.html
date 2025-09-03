@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Resume - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8 mx-auto">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-upload text-primary"></i>
+                    Upload Resume
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <div class="mb-4">
+                        <label for="file" class="form-label">Select Resume File</label>
+                        <input type="file" class="form-control" id="file" name="file" 
+                               accept=".pdf,.doc,.docx,.txt" required>
+                        <div class="form-text">
+                            Supported formats: PDF, DOC, DOCX, TXT (Max size: 16MB)
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn">
+                            <i class="fas fa-upload"></i>
+                            <span id="btnText">Upload and Analyze</span>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Progress bar (hidden by default) -->
+                <div class="mt-3" id="progressContainer" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">Processing resume...</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Instructions -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle text-info"></i>
+                    What happens after upload?
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-search text-primary"></i> Text Extraction</h6>
+                        <p class="small text-muted">We extract all text content from your resume file.</p>
+                        
+                        <h6><i class="fas fa-tags text-success"></i> Skill Detection</h6>
+                        <p class="small text-muted">Our AI identifies technical skills, programming languages, and tools.</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-user text-warning"></i> Information Parsing</h6>
+                        <p class="small text-muted">We extract contact info, work experience, and education details.</p>
+                        
+                        <h6><i class="fas fa-star text-info"></i> Score Calculation</h6>
+                        <p class="small text-muted">Generate an overall resume score based on completeness and skills.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Tips -->
+        <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-lightbulb"></i> Tips for better analysis:</h6>
+            <ul class="mb-0">
+                <li>Use clear, readable fonts in your resume</li>
+                <li>Include specific technical skills and tools</li>
+                <li>Mention programming languages and frameworks</li>
+                <li>Include contact information (email, phone, LinkedIn)</li>
+                <li>List work experience with dates and descriptions</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const uploadBtn = document.getElementById('uploadBtn');
+    const btnText = document.getElementById('btnText');
+    const progressContainer = document.getElementById('progressContainer');
+    const progressBar = progressContainer.querySelector('.progress-bar');
+    
+    // Show progress
+    uploadBtn.disabled = true;
+    btnText.textContent = 'Processing...';
+    progressContainer.style.display = 'block';
+    
+    // Simulate progress (since we can't track actual upload progress easily)
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        progressBar.style.width = progress + '%';
+    }, 200);
+    
+    // Clean up on form submission
+    setTimeout(() => {
+        clearInterval(interval);
+        progressBar.style.width = '100%';
+    }, 2000);
+});
+
+// File validation
+document.getElementById('file').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const maxSize = 16 * 1024 * 1024; // 16MB
+        if (file.size > maxSize) {
+            alert('File size must be less than 16MB');
+            e.target.value = '';
+        }
+    }
+});
+</script>
+{% endblock %}

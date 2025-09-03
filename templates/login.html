@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header text-center bg-primary text-white">
+                <h4><i class="fas fa-sign-in-alt"></i> Login</h4>
+            </div>
+            <div class="card-body">
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username_or_email" class="form-label">
+                            <i class="fas fa-user"></i> Username or Email
+                        </label>
+                        <input type="text" class="form-control" id="username_or_email" name="username_or_email" required>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">
+                            <i class="fas fa-lock"></i> Password
+                        </label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password" required>
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <div class="invalid-feedback"></div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="remember_me" name="remember_me">
+                        <label class="form-check-label" for="remember_me">
+                            Remember me for 30 days
+                        </label>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="loginBtn">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </button>
+                    </div>
+                </form>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <p class="mb-0">Don't have an account?</p>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-user-plus"></i> Create Account
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Real-time Status -->
+        <div class="mt-3">
+            <div class="alert alert-info d-none" id="statusAlert">
+                <div class="d-flex align-items-center">
+                    <div class="spinner-border spinner-border-sm me-2" role="status" id="statusSpinner">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <span id="statusMessage">Processing...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Demo Accounts Info -->
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="fas fa-info-circle"></i> Demo Accounts</h6>
+            </div>
+            <div class="card-body">
+                <small class="text-muted">
+                    <strong>Quick Login Options:</strong><br>
+                    • Username: <code>demo</code> / Password: <code>demo123</code><br>
+                    • Username: <code>admin</code> / Password: <code>admin123</code>
+                </small>
+                <div class="mt-2">
+                    <button class="btn btn-outline-info btn-sm me-1" onclick="fillDemo('demo', 'demo123')">
+                        Demo User
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" onclick="fillDemo('admin', 'admin123')">
+                        Admin User
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const statusAlert = document.getElementById('statusAlert');
+    const statusMessage = document.getElementById('statusMessage');
+    const statusSpinner = document.getElementById('statusSpinner');
+    
+    // Toggle password visibility
+    document.getElementById('togglePassword').addEventListener('click', function() {
+        const passwordField = document.getElementById('password');
+        const icon = this.querySelector('i');
+        
+        if (passwordField.type === 'password') {
+            passwordField.type = 'text';
+            icon.classList.remove('fa-eye');
+            icon.classList.add('fa-eye-slash');
+        } else {
+            passwordField.type = 'password';
+            icon.classList.remove('fa-eye-slash');
+            icon.classList.add('fa-eye');
+        }
+    });
+    
+    // Real-time form validation
+    const inputs = loginForm.querySelectorAll('input[required]');
+    inputs.forEach(input => {
+        input.addEventListener('input', function() {
+            validateField(this);
+        });
+        
+        input.addEventListener('blur', function() {
+            validateField(this);
+        });
+    });
+    
+    function validateField(field) {
+        const feedback = field.parentNode.querySelector('.invalid-feedback') || 
+                        field.parentNode.parentNode.querySelector('.invalid-feedback');
+        
+        if (field.value.trim() === '') {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            feedback.textContent = 'This field is required';
+        } else if (field.name === 'username_or_email' && field.value.includes('@')) {
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (emailRegex.test(field.value)) {
+                field.classList.add('is-valid');
+                field.classList.remove('is-invalid');
+                feedback.textContent = '';
+            } else {
+                field.classList.add('is-invalid');
+                field.classList.remove('is-valid');
+                feedback.textContent = 'Please enter a valid email address';
+            }
+        } else {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+            feedback.textContent = '';
+        }
+    }
+    
+    // Form submission
+    loginForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        showStatus('Logging in...', 'info');
+        loginBtn.disabled = true;
+        loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+        
+        const formData = new FormData(loginForm);
+        const data = {
+            username_or_email: formData.get('username_or_email'),
+            password: formData.get('password'),
+            remember_me: formData.get('remember_me') === 'on'
+        };
+        
+        fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showStatus(data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 1000);
+            } else {
+                showStatus(data.message, 'danger');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showStatus('An error occurred. Please try again.', 'danger');
+            loginBtn.disabled = false;
+            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+        });
+    });
+    
+    function showStatus(message, type) {
+        statusMessage.textContent = message;
+        statusAlert.className = `alert alert-${type}`;
+        statusAlert.classList.remove('d-none');
+        
+        if (type === 'success' || type === 'danger') {
+            statusSpinner.style.display = 'none';
+        } else {
+            statusSpinner.style.display = 'inline-block';
+        }
+        
+        if (type === 'success' || type === 'danger') {
+            setTimeout(() => {
+                statusAlert.classList.add('d-none');
+            }, 5000);
+        }
+    }
+    
+    // Auto-create demo accounts
+    createDemoAccounts();
+});
+
+// Demo account functions
+function fillDemo(username, password) {
+    document.getElementById('username_or_email').value = username;
+    document.getElementById('password').value = password;
+    
+    // Trigger validation
+    document.getElementById('username_or_email').dispatchEvent(new Event('input'));
+    document.getElementById('password').dispatchEvent(new Event('input'));
+}
+
+function createDemoAccounts() {
+    fetch('/api/create-demo-accounts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    }).catch(error => {
+        console.log('Demo accounts may already exist');
+    });
+}
+</script>
+{% endblock %}

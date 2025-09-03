@@ -1,0 +1,504 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+            <i class="fas fa-sync-alt"></i> Refresh
+        </button>
+        <button type="button" class="btn btn-outline-success btn-sm" onclick="exportData()">
+            <i class="fas fa-download"></i> Export
+        </button>
+    </div>
+</div>
+
+<!-- Key Metrics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-4 text-primary">{{ stats.total_resumes }}</div>
+                <h6 class="card-title">Total Resumes</h6>
+                <p class="card-text text-muted">
+                    <i class="fas fa-file-alt"></i> Uploaded resumes
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-4 text-success">{{ stats.total_jobs }}</div>
+                <h6 class="card-title">Job Descriptions</h6>
+                <p class="card-text text-muted">
+                    <i class="fas fa-briefcase"></i> Available positions
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-4 text-info">{{ stats.total_matches }}</div>
+                <h6 class="card-title">Total Matches</h6>
+                <p class="card-text text-muted">
+                    <i class="fas fa-handshake"></i> Resume-job matches
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <div class="display-4 text-warning">{{ stats.avg_score }}%</div>
+                <h6 class="card-title">Average Score</h6>
+                <p class="card-text text-muted">
+                    <i class="fas fa-star"></i> Resume quality
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Skills Chart -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-cogs"></i> Top Skills</h5>
+                <div class="dropdown">
+                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Options
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="updateSkillsChart('top10')">Top 10</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="updateSkillsChart('top20')">Top 20</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="updateSkillsChart('all')">All Skills</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="skillsChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resume Score Distribution -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Score Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="scoreChart" width="400" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Upload Timeline -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-chart-line"></i> Upload Timeline</h5>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary" onclick="updateTimeline('7d')">7 Days</button>
+                    <button type="button" class="btn btn-outline-secondary active" onclick="updateTimeline('30d')">30 Days</button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="updateTimeline('90d')">90 Days</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="timelineChart" width="600" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock"></i> Recent Activity</h5>
+            </div>
+            <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                <div class="timeline">
+                    {% if stats.recent_activities %}
+                        {% for activity in stats.recent_activities %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-{{ activity.color }}"></div>
+                            <div class="timeline-content">
+                                <h6 class="timeline-title">
+                                    <i class="{{ activity.icon }}"></i> {{ activity.description }}
+                                </h6>
+                                <p class="timeline-text">{{ activity.title }}</p>
+                                <small class="text-muted" data-date="{{ activity.date }}">{{ activity.date }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <p>No recent activity</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Statistics -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-table"></i> Detailed Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Metric</th>
+                                <th>Value</th>
+                                <th>Change</th>
+                                <th>Trend</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Total Resumes</td>
+                                <td>{{ stats.total_resumes }}</td>
+                                <td><span class="text-success">+5 this week</span></td>
+                                <td><i class="fas fa-arrow-up text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Job Descriptions</td>
+                                <td>{{ stats.total_jobs }}</td>
+                                <td><span class="text-info">+2 this week</span></td>
+                                <td><i class="fas fa-arrow-up text-info"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Successful Matches</td>
+                                <td>{{ stats.total_matches }}</td>
+                                <td><span class="text-success">+12 this week</span></td>
+                                <td><i class="fas fa-arrow-up text-success"></i></td>
+                            </tr>
+                            <tr>
+                                <td>Average Resume Score</td>
+                                <td>{{ stats.avg_score }}%</td>
+                                <td><span class="text-warning">-2% this week</span></td>
+                                <td><i class="fas fa-arrow-down text-warning"></i></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Initialize charts when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    formatRelativeDates();
+    
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        refreshRecentActivity();
+        formatRelativeDates(); // Update relative times
+    }, 30000);
+});
+
+function formatRelativeDates() {
+    const dateElements = document.querySelectorAll('[data-date]');
+    dateElements.forEach(element => {
+        const date = new Date(element.getAttribute('data-date'));
+        element.textContent = getRelativeTime(date);
+    });
+}
+
+function getRelativeTime(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+        return 'Just now';
+    } else if (diffInSeconds < 3600) {
+        const minutes = Math.floor(diffInSeconds / 60);
+        return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 86400) {
+        const hours = Math.floor(diffInSeconds / 3600);
+        return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 2592000) {
+        const days = Math.floor(diffInSeconds / 86400);
+        return `${days} day${days > 1 ? 's' : ''} ago`;
+    } else {
+        return date.toLocaleDateString();
+    }
+}
+
+function initializeCharts() {
+    // Skills Chart
+    const skillsCtx = document.getElementById('skillsChart').getContext('2d');
+    const skillsData = {
+        labels: [{% for skill, count in stats.top_skills %}'{{ skill }}'{% if not loop.last %},{% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Frequency',
+            data: [{% for skill, count in stats.top_skills %}{{ count }}{% if not loop.last %},{% endif %}{% endfor %}],
+            backgroundColor: [
+                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+                '#FF9F40', '#FF6384', '#C9CBCF', '#4BC0C0', '#FF6384'
+            ]
+        }]
+    };
+    
+    new Chart(skillsCtx, {
+        type: 'doughnut',
+        data: skillsData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Score Distribution Chart
+    const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+    new Chart(scoreCtx, {
+        type: 'pie',
+        data: {
+            labels: ['Excellent (80-100%)', 'Good (60-79%)', 'Average (40-59%)', 'Poor (0-39%)'],
+            datasets: [{
+                data: [25, 35, 30, 10], // Sample data - would be calculated from actual scores
+                backgroundColor: ['#28a745', '#17a2b8', '#ffc107', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Timeline Chart
+    const timelineCtx = document.getElementById('timelineChart').getContext('2d');
+    const timelineData = {{ stats.timeline_data | tojson }};
+    
+    timelineChart = new Chart(timelineCtx, {
+        type: 'line',
+        data: {
+            labels: timelineData.labels.map(date => {
+                const d = new Date(date);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }),
+            datasets: [{
+                label: 'Resumes Uploaded',
+                data: timelineData.resume_data,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4,
+                fill: true
+            }, {
+                label: 'Jobs Posted',
+                data: timelineData.job_data,
+                borderColor: '#28a745',
+                backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+}
+
+function refreshData() {
+    // Refresh recent activity
+    refreshRecentActivity();
+    
+    // Refresh timeline with current period
+    const activeButton = document.querySelector('.btn-group .btn.active');
+    if (activeButton) {
+        const period = activeButton.textContent.includes('7') ? '7d' : 
+                      activeButton.textContent.includes('30') ? '30d' : '90d';
+        updateTimeline(period);
+    }
+    
+    // Show refresh indicator
+    const refreshBtn = event.target;
+    const originalIcon = refreshBtn.innerHTML;
+    refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+    refreshBtn.disabled = true;
+    
+    setTimeout(() => {
+        refreshBtn.innerHTML = originalIcon;
+        refreshBtn.disabled = false;
+    }, 1000);
+}
+
+function exportData() {
+    // This would generate and download a report
+    alert('Export functionality would be implemented here');
+}
+
+function updateSkillsChart(range) {
+    // This would update the skills chart based on the selected range
+    console.log('Updating skills chart for range:', range);
+}
+
+let timelineChart;
+
+function updateTimeline(period) {
+    // Update active button
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Fetch new data from API
+    fetch(`/api/analytics/timeline/${period}`)
+        .then(response => response.json())
+        .then(data => {
+            // Update chart data
+            timelineChart.data.labels = data.labels.map(date => {
+                const d = new Date(date);
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            });
+            timelineChart.data.datasets[0].data = data.resume_data;
+            timelineChart.data.datasets[1].data = data.job_data;
+            timelineChart.update();
+        })
+        .catch(error => {
+            console.error('Error updating timeline:', error);
+        });
+}
+
+function refreshRecentActivity() {
+    fetch('/api/analytics/recent-activity')
+        .then(response => response.json())
+        .then(activities => {
+            const timelineContainer = document.querySelector('.timeline');
+            if (activities.length === 0) {
+                timelineContainer.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <p>No recent activity</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            timelineContainer.innerHTML = activities.map(activity => `
+                <div class="timeline-item">
+                    <div class="timeline-marker bg-${activity.color}"></div>
+                    <div class="timeline-content">
+                        <h6 class="timeline-title">
+                            <i class="${activity.icon}"></i> ${activity.description}
+                        </h6>
+                        <p class="timeline-text">${activity.title}</p>
+                        <small class="text-muted" data-date="${activity.date}">${getRelativeTime(new Date(activity.date))}</small>
+                    </div>
+                </div>
+            `).join('');
+        })
+        .catch(error => {
+            console.error('Error refreshing recent activity:', error);
+        });
+}
+</script>
+
+<style>
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: -35px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+
+.timeline-item:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    left: -29px;
+    top: 17px;
+    width: 2px;
+    height: calc(100% + 8px);
+    background-color: #dee2e6;
+}
+
+.timeline-title {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+}
+
+.timeline-text {
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    color: #6c757d;
+}
+
+.display-4 {
+    font-size: 2.5rem;
+    font-weight: 300;
+}
+
+.card {
+    transition: transform 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Profile - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <!-- Profile Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white text-center">
+                <div class="profile-avatar mb-2">
+                    <i class="fas fa-user-circle fa-5x"></i>
+                </div>
+                <h5>{{ user.full_name or user.username }}</h5>
+                <small>@{{ user.username }}</small>
+            </div>
+            <div class="card-body">
+                <div class="profile-info">
+                    <div class="info-item mb-2">
+                        <i class="fas fa-envelope text-muted"></i>
+                        <span class="ms-2">{{ user.email }}</span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-calendar text-muted"></i>
+                        <span class="ms-2">Joined {{ user.created_date }}</span>
+                    </div>
+                    <div class="info-item mb-2">
+                        <i class="fas fa-clock text-muted"></i>
+                        <span class="ms-2">Last login: {{ user.last_login or 'Never' }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-shield-alt text-muted"></i>
+                        <span class="ms-2 badge bg-{{ 'success' if user.role == 'admin' else 'primary' }}">
+                            {{ user.role.title() }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-bolt"></i> Quick Actions</h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('upload_resume') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-upload"></i> Upload Resume
+                    </a>
+                    <a href="{{ url_for('manage_jobs') }}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-briefcase"></i> Post Job
+                    </a>
+                    <a href="{{ url_for('analytics') }}" class="btn btn-outline-info btn-sm">
+                        <i class="fas fa-chart-bar"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <!-- Account Statistics -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Your Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <h4 class="text-primary" id="resumeCount">0</h4>
+                            <small class="text-muted">Resumes Uploaded</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <h4 class="text-success" id="jobCount">0</h4>
+                            <small class="text-muted">Jobs Posted</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <h4 class="text-info" id="matchCount">0</h4>
+                            <small class="text-muted">Matches Found</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-item">
+                            <h4 class="text-warning" id="avgScore">0%</h4>
+                            <small class="text-muted">Avg Score</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Settings -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5><i class="fas fa-cog"></i> Profile Settings</h5>
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="full_name" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="full_name" name="full_name" 
+                                       value="{{ user.full_name or '' }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <input type="text" class="form-control" id="username" name="username" 
+                                       value="{{ user.username }}" readonly>
+                                <div class="form-text">Username cannot be changed</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               value="{{ user.email }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Toast -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050">
+    <div class="toast" id="statusToast" role="alert">
+        <div class="toast-header">
+            <i class="fas fa-info-circle me-2"></i>
+            <strong class="me-auto">Profile</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            <!-- Message will be inserted here -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserStatistics();
+    
+    // Profile form submission
+    document.getElementById('profileForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('/api/update-profile', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showToast('Profile updated successfully!', 'success');
+            } else {
+                showToast(data.message || 'Error updating profile', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showToast('An error occurred while updating profile', 'error');
+        });
+    });
+    
+    function loadUserStatistics() {
+        // For now, just show placeholder values
+        // This would normally fetch from /api/user-statistics
+        document.getElementById('resumeCount').textContent = '0';
+        document.getElementById('jobCount').textContent = '0';
+        document.getElementById('matchCount').textContent = '0';
+        document.getElementById('avgScore').textContent = '0%';
+    }
+    
+    function showToast(message, type) {
+        const toast = document.getElementById('statusToast');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastHeader = toast.querySelector('.toast-header');
+        
+        toastMessage.textContent = message;
+        
+        // Update toast styling based on type
+        if (type === 'success') {
+            toastHeader.className = 'toast-header bg-success text-white';
+        } else if (type === 'error') {
+            toastHeader.className = 'toast-header bg-danger text-white';
+        } else {
+            toastHeader.className = 'toast-header';
+        }
+        
+        const bsToast = new bootstrap.Toast(toast);
+        bsToast.show();
+    }
+    
+    // Auto-refresh statistics every 30 seconds
+    setInterval(loadUserStatistics, 30000);
+});
+</script>
+
+<style>
+.profile-avatar {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+}
+
+.stat-item {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    background-color: #f8f9fa;
+    margin-bottom: 1rem;
+}
+
+.stat-item h4 {
+    margin-bottom: 0.25rem;
+    font-weight: bold;
+}
+
+.toast {
+    min-width: 300px;
+}
+</style>
+{% endblock %}

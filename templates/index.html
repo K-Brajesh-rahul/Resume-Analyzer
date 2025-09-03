@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Resume Analyzer{% endblock %}
+
+{% block content %}
+{% if session.user_id %}
+<!-- Logged-in User Dashboard -->
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2>Welcome back, {{ session.username }}!</h2>
+                <p class="text-muted">Here's your resume analysis dashboard</p>
+            </div>
+            <div class="text-end">
+                <span class="badge bg-success fs-6">Online</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-file-alt fa-2x text-primary mb-2"></i>
+                <h4 class="text-primary" id="userResumeCount">0</h4>
+                <small class="text-muted">Your Resumes</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-briefcase fa-2x text-success mb-2"></i>
+                <h4 class="text-success" id="userJobCount">0</h4>
+                <small class="text-muted">Jobs Posted</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-handshake fa-2x text-info mb-2"></i>
+                <h4 class="text-info" id="userMatchCount">0</h4>
+                <small class="text-muted">Matches Found</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                <h4 class="text-warning" id="userAvgScore">0%</h4>
+                <small class="text-muted">Avg Score</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Upload Resume</h5>
+                <p class="card-text">Add a new resume for AI analysis</p>
+                <a href="{{ url_for('upload_resume') }}" class="btn btn-primary">
+                    <i class="fas fa-upload"></i> Upload Now
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-briefcase fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Post Job</h5>
+                <p class="card-text">Add job descriptions for matching</p>
+                <a href="{{ url_for('manage_jobs') }}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Add Job
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                <h5 class="card-title">View Analytics</h5>
+                <p class="card-text">See detailed statistics and trends</p>
+                <a href="{{ url_for('analytics') }}" class="btn btn-info">
+                    <i class="fas fa-chart-bar"></i> View Stats
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- Not Logged-in Landing Page -->
+<div class="row">
+    <div class="col-lg-8 mx-auto text-center">
+        <h1 class="display-4 mb-4">
+            <i class="fas fa-robot text-primary"></i>
+            AI-Powered Resume Analyzer
+        </h1>
+        <p class="lead mb-5">
+            Upload resumes, extract skills automatically, match candidates to job requirements, 
+            and make data-driven hiring decisions with our intelligent screening system.
+        </p>
+        
+        <!-- Call to Action -->
+        <div class="mb-5">
+            <a href="{{ url_for('register') }}" class="btn btn-success btn-lg me-3">
+                <i class="fas fa-user-plus"></i> Get Started Free
+            </a>
+            <a href="{{ url_for('login') }}" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        </div>
+        
+        <div class="row mb-5">
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-upload fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">Upload Resumes</h5>
+                        <p class="card-text">Support for PDF, DOC, DOCX, and TXT files</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-brain fa-3x text-success mb-3"></i>
+                        <h5 class="card-title">AI Analysis</h5>
+                        <p class="card-text">Automatic skill extraction and experience parsing</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        <i class="fas fa-chart-line fa-3x text-info mb-3"></i>
+                        <h5 class="card-title">Smart Matching</h5>
+                        <p class="card-text">Match candidates to job requirements with scores</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <div class="col-lg-10 mx-auto">
+        <h2 class="text-center mb-4">Key Features</h2>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-check-circle fa-2x text-success"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5>Automatic Text Extraction</h5>
+                        <p>Extract text from various file formats including PDF, Word documents, and plain text files.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-cogs fa-2x text-primary"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5>Skill Recognition</h5>
+                        <p>Identify technical skills, programming languages, frameworks, and tools mentioned in resumes.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-user-tie fa-2x text-warning"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5>Experience Analysis</h5>
+                        <p>Parse work experience, education details, and contact information automatically.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6 mb-4">
+                <div class="d-flex">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-chart-bar fa-2x text-info"></i>
+                    </div>
+                    <div class="flex-grow-1 ms-3">
+                        <h5>Analytics Dashboard</h5>
+                        <p>View hiring statistics, top skills, and candidate performance metrics.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-lg-8 mx-auto text-center">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h3 class="card-title">Ready to Get Started?</h3>
+                <p class="card-text">Upload your first resume and see the AI analysis in action!</p>
+                <a href="{{ url_for('upload_resume') }}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-rocket"></i> Start Analyzing
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% if session.user_id %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserStats();
+    
+    // Auto-refresh stats every 30 seconds
+    setInterval(loadUserStats, 30000);
+});
+
+function loadUserStats() {
+    fetch('/api/user-statistics')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('userResumeCount').textContent = data.resume_count || 0;
+            document.getElementById('userJobCount').textContent = data.job_count || 0;
+            document.getElementById('userMatchCount').textContent = data.match_count || 0;
+            document.getElementById('userAvgScore').textContent = (data.avg_score || 0) + '%';
+            
+            // Add animation effect
+            animateCounters();
+        })
+        .catch(error => {
+            console.error('Error loading user statistics:', error);
+        });
+}
+
+function animateCounters() {
+    const counters = document.querySelectorAll('[id$="Count"], [id$="Score"]');
+    counters.forEach(counter => {
+        counter.style.transform = 'scale(1.1)';
+        setTimeout(() => {
+            counter.style.transform = 'scale(1)';
+        }, 200);
+    });
+}
+</script>
+
+<style>
+.card {
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+#userResumeCount, #userJobCount, #userMatchCount, #userAvgScore {
+    transition: transform 0.2s ease-in-out;
+}
+
+.badge {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+</style>
+{% endblock %}
+{% endif %}

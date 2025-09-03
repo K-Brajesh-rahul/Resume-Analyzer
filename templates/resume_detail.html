@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Details - Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h4><i class="fas fa-file-alt"></i> {{ resume.original_filename }}</h4>
+                <div class="score-circle {% if resume.overall_score >= 80 %}score-excellent{% elif resume.overall_score >= 60 %}score-good{% elif resume.overall_score >= 40 %}score-average{% else %}score-poor{% endif %}">
+                    {{ "%.0f"|format(resume.overall_score) }}%
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Upload Date:</strong></div>
+                    <div class="col-sm-9">{{ resume.upload_date }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>File Name:</strong></div>
+                    <div class="col-sm-9">{{ resume.filename }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-sm-3"><strong>Overall Score:</strong></div>
+                    <div class="col-sm-9">
+                        <div class="progress" style="height: 25px;">
+                            <div class="progress-bar {% if resume.overall_score >= 80 %}bg-success{% elif resume.overall_score >= 60 %}bg-info{% elif resume.overall_score >= 40 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                 role="progressbar" style="width: {{ resume.overall_score }}%">
+                                {{ "%.1f"|format(resume.overall_score) }}%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Information -->
+        {% if resume.contact_info %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-address-card"></i> Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for key, value in resume.contact_info.items() %}
+                    <div class="col-md-6 mb-2">
+                        <strong>{{ key.title() }}:</strong> {{ value }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Skills -->
+        {% if resume.skills %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-cogs"></i> Skills ({{ resume.skills|length }})</h5>
+            </div>
+            <div class="card-body">
+                {% for skill in resume.skills %}
+                    <span class="skill-badge">{{ skill }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Experience -->
+        {% if resume.experience %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-briefcase"></i> Experience</h5>
+            </div>
+            <div class="card-body">
+                {% for exp in resume.experience %}
+                <div class="mb-3 p-3 border-start border-primary border-3">
+                    <h6 class="mb-1">{{ exp.get('title', 'Position') }}</h6>
+                    {% if exp.get('company') %}
+                    <p class="text-muted mb-1">{{ exp.company }}</p>
+                    {% endif %}
+                    {% if exp.get('duration') %}
+                    <p class="text-muted mb-1"><i class="fas fa-calendar"></i> {{ exp.duration }}</p>
+                    {% endif %}
+                    {% if exp.get('description') %}
+                    <p class="mb-0">{{ exp.description }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Education -->
+        {% if resume.education %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-graduation-cap"></i> Education</h5>
+            </div>
+            <div class="card-body">
+                {% for edu in resume.education %}
+                <div class="mb-3 p-3 border-start border-success border-3">
+                    <h6 class="mb-1">{{ edu.get('degree', 'Degree') }}</h6>
+                    {% if edu.get('institution') %}
+                    <p class="text-muted mb-1">{{ edu.institution }}</p>
+                    {% endif %}
+                    {% if edu.get('year') %}
+                    <p class="text-muted mb-1"><i class="fas fa-calendar"></i> {{ edu.year }}</p>
+                    {% endif %}
+                    {% if edu.get('details') %}
+                    <p class="mb-0">{{ edu.details }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        <!-- Actions -->
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-tools"></i> Actions</h5>
+            </div>
+            <div class="card-body">
+                <a href="{{ url_for('list_resumes') }}" class="btn btn-secondary btn-block mb-2">
+                    <i class="fas fa-arrow-left"></i> Back to Resumes
+                </a>
+                <button class="btn btn-primary btn-block mb-2" onclick="matchWithJobs()">
+                    <i class="fas fa-search"></i> Find Job Matches
+                </button>
+                <button class="btn btn-info btn-block" onclick="downloadResume()">
+                    <i class="fas fa-download"></i> Download Analysis
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie"></i> Quick Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h4 class="text-primary">{{ resume.skills|length }}</h4>
+                        <small class="text-muted">Skills</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success">{{ resume.experience|length }}</h4>
+                        <small class="text-muted">Experience</small>
+                    </div>
+                </div>
+                <div class="row text-center mt-3">
+                    <div class="col-6">
+                        <h4 class="text-info">{{ resume.education|length }}</h4>
+                        <small class="text-muted">Education</small>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-warning">{{ "%.0f"|format(resume.overall_score) }}%</h4>
+                        <small class="text-muted">Score</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extracted Text Modal -->
+<div class="modal fade" id="textModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Extracted Text</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <pre style="white-space: pre-wrap; max-height: 400px; overflow-y: auto;">{{ resume.extracted_text }}</pre>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function matchWithJobs() {
+    // This would typically open a modal or redirect to job matching page
+    alert('Job matching functionality would be implemented here');
+}
+
+function downloadResume() {
+    // This would generate and download a PDF report
+    alert('Download functionality would be implemented here');
+}
+
+function showExtractedText() {
+    $('#textModal').modal('show');
+}
+</script>
+{% endblock %}
